@@ -8,10 +8,16 @@ import (
 	"net/http"
 )
 
-func getFeed(url string) []*gofeed.Item {
+func getFeed(url string, r *http.Request) []*gofeed.Item {
 	parser := gofeed.NewParser()
-	feed, _ := parser.ParseURL(url)
-	return feed.Items
+	ctx := appengine.NewContext(r)
+	parser.Client = urlfetch.Client(ctx)
+
+	feed, err := parser.ParseURL(url)
+	if err == nil && feed != nil {
+		return feed.Items
+	}
+	return []*gofeed.Item{}
 }
 
 func init() {
@@ -19,15 +25,8 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	//	items := getFeed("http://www.youredm.com/feed/")
-	parser := gofeed.NewParser()
-	ctx := appengine.NewContext(r)
-	parser.Client = urlfetch.Client(ctx)
-	feed, _ := parser.ParseURL("http://www.youredm.com/feed/")
-	if feed != nil {
-		for _, item := range feed.Items {
-			fmt.Fprint(w, item)
-		}
+	items := getFeed("http://www.youredm.com/feed/", r)
+	for _, item := range items {
+		fmt.Fprint(w, item)
 	}
-	fmt.Fprint(w, "hello")
 }
